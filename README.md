@@ -6,14 +6,15 @@ Dicha librería se utiliza por medio de un ambiente de python .venv desde la ver
 Primero se necesita crear el ambiente .venv desde vscode por el Ctrl + Shift + P y buscamos "Python: Create Envirnoment" y seleccionamos alguna versión de python de las mencionadas.
 Una vez instalado, se necesita activar el .venv desde terminal:
 
-bash:
-  source .venv/bin/activate
-
+**bash**:
+		`source .venv/bin/activate`
 
 Una vez activado, ahora si instalamos la librería de python "pygame":
 
-bash:
-  pip install pygame
+**bash**:
+  	`pip install pygame`
 
 Si no permite utilizar "pip" utilice:
-  pip3.14 install pygame
+
+**bash**:
+  	`pip3.14 install pygame`
