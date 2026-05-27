@@ -1,0 +1,1 @@
+Este proyecto tiene como propósito crear un juego de cartas (existente), llamado "La Senda del Sacerdote", el cual va a ser jugado por la computadora, específicamente por un código de un algoritmo de programación dinámica
