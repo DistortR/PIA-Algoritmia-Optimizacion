@@ -1,0 +1,150 @@
+{
+  "cartas": [
+    {
+      "id": "aprendiz",
+      "numero": 0,
+      "nombre": "APRENDIZ",
+      "color": null,
+      "subclase": null,
+      "habilidad": null,
+      "es_fijo": true,
+      "posicion_fija": "inicio"
+    },
+    {
+      "id": "duda",
+      "numero": 1,
+      "nombre": "DUDA",
+      "color": "rojo",
+      "subclase": "FALSO MAESTRO",
+      "habilidad": "Intercambia de lugar las 2 cartas adyacentes a esta. Si esta carta está en una orilla, recorre esta carta un espacio.",
+      "es_fijo": false
+    },
+    {
+      "id": "rencor",
+      "numero": 2,
+      "nombre": "RENCOR",
+      "color": "rojo",
+      "subclase": "FALSO MAESTRO",
+      "habilidad": "Destruye la carta adyacente de valor más bajo.",
+      "es_fijo": false
+    },
+    {
+      "id": "miedo",
+      "numero": 3,
+      "nombre": "MIEDO",
+      "color": "rojo",
+      "subclase": "FALSO MAESTRO",
+      "habilidad": "Manda la carta adyacente de valor más bajo al inicio de la senda.",
+      "es_fijo": false
+    },
+    {
+      "id": "pereza",
+      "numero": 4,
+      "nombre": "PEREZA",
+      "color": "rojo",
+      "subclase": "FALSO MAESTRO",
+      "habilidad": "Retrocede la carta adyacente de valor más bajo 2 espacios. De no ser posible, avanza esta carta 1 espacio.",
+      "es_fijo": false
+    },
+    {
+      "id": "ejercicio",
+      "numero": 5,
+      "nombre": "EJERCICIO",
+      "color": "azul",
+      "subclase": "MAESTRO",
+      "habilidad": "Intercambia de lugar con una carta de hasta 2 de distancia.",
+      "es_fijo": false
+    },
+    {
+      "id": "cizanoso",
+      "numero": 6,
+      "nombre": "CIZAÑOSO",
+      "color": "rojo",
+      "subclase": "FALSO MAESTRO",
+      "habilidad": "Manda la carta adyacente de valor más bajo un espacio antes del rencor. Si la carta de valor más bajo es el rencor, mueve el rencor 2 espacios en dirección del aprendiz.",
+      "es_fijo": false
+    },
+    {
+      "id": "filosofia",
+      "numero": 7,
+      "nombre": "FILOSOFIA",
+      "color": "azul",
+      "subclase": "MAESTRO",
+      "habilidad": "Una carta a 3 de distancia muévela 1 espacio. Una carta a 2 de distancia muévela 2 espacios. Una carta a 1 de distancia muévela 3 espacios.",
+      "es_fijo": false
+    },
+    {
+      "id": "herbolaria",
+      "numero": 8,
+      "nombre": "HERBOLARIA",
+      "color": "azul",
+      "subclase": "MAESTRO",
+      "habilidad": "Retrocede 1 carta adyacente 2 espacios. Adelanta una carta adyacente 1 espacio.",
+      "es_fijo": false
+    },
+    {
+      "id": "meditacion",
+      "numero": 9,
+      "nombre": "MEDITACION",
+      "color": "azul",
+      "subclase": "MAESTRO",
+      "habilidad": "Intercambia esta carta de lugar con otra que esté exactamente a 3 espacios de distancia de esta.",
+      "es_fijo": false
+    },
+    {
+      "id": "oracion",
+      "numero": 10,
+      "nombre": "ORACION",
+      "color": "azul",
+      "subclase": "MAESTRO",
+      "habilidad": "Intercambia esta carta de lugar con otra adyacente.",
+      "es_fijo": false
+    },
+    {
+      "id": "envidia",
+      "numero": 11,
+      "nombre": "ENVIDIA",
+      "color": "rojo",
+      "subclase": "FALSO MAESTRO",
+      "habilidad": "Mueve la carta adyacente de valor más bajo exactamente 2 espacios en dirección del rencor, aunque esta lo rebase. Si fuese el rencor, mueve el rencor 2 espacios hacia el aprendiz.",
+      "es_fijo": false
+    },
+    {
+      "id": "peregrino",
+      "numero": 12,
+      "nombre": "PEREGRINO",
+      "color": "azul",
+      "subclase": "MAESTRO",
+      "habilidad": "Mueve una carta adyacente exactamente 2 espacios.",
+      "es_fijo": false
+    },
+    {
+      "id": "magia",
+      "numero": 13,
+      "nombre": "MAGIA",
+      "color": "azul",
+      "subclase": "MAESTRO",
+      "habilidad": "Retrocede una carta adyacente exactamente 3 espacios. Adelanta una adyacente 2 espacios.",
+      "es_fijo": false
+    },
+    {
+      "id": "cuerpo_astral",
+      "numero": 14,
+      "nombre": "CUERPO ASTRAL",
+      "color": "azul",
+      "subclase": "MAESTRO",
+      "habilidad": "Intercambia de lugar esta carta con una carta exactamente a 4 espacios de distancia de esta.",
+      "es_fijo": false
+    },
+    {
+      "id": "ah_puch",
+      "numero": 15,
+      "nombre": "AH PUCH",
+      "color": null,
+      "subclase": null,
+      "habilidad": null,
+      "es_fijo": true,
+      "posicion_fija": "fin"
+    }
+  ]
+}
