@@ -805,10 +805,25 @@ while running:
     
     carta_hover = None
     for i, carta in enumerate(senda):
-        rect = get_card_rect(i)
-        if rect.collidepoint(mouse_pos):
+        # 1. Obtenemos a dónde DEBERÍA estar la carta lógicamente
+        target_rect = get_card_rect(i)
+        
+        # 2. Si la carta acaba de nacer o no tiene coordenadas de animación, se las creamos
+        if "anim_x" not in carta:
+            carta["anim_x"] = target_rect.x
+            carta["anim_y"] = target_rect.y
+            
+        # 3. INTERPOLACIÓN LINEAL (LERP)
+        carta["anim_x"] += (target_rect.x - carta["anim_x"]) * 0.15
+        carta["anim_y"] += (target_rect.y - carta["anim_y"]) * 0.15
+        
+        # 4. Creamos un Rectángulo temporal solo para dibujar
+        anim_rect = pygame.Rect(carta["anim_x"], carta["anim_y"], CARD_W, CARD_H)
+        
+        if anim_rect.collidepoint(mouse_pos):
             carta_hover = carta
-        dibujar_carta(carta, rect, rect.collidepoint(mouse_pos), False)
+            
+        dibujar_carta(carta, anim_rect, anim_rect.collidepoint(mouse_pos), False)
     
     dibujar_panel_y_botones(carta_hover)
     
