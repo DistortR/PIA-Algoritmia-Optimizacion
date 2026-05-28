@@ -2,11 +2,19 @@ import pygame
 import json
 import random
 import copy
+import sys
+
+# Importamos nuestro motor de IA / Solver
+import senda_solver
 
 # -------------------- CARGAR DATOS --------------------
 def cargar_datos():
-    with open("La Senda del Sacerdote/cartas.json") as f:
-        data = json.load(f)
+    try:
+        with open("La Senda del Sacerdote/cartas.json") as f:
+            data = json.load(f)
+    except FileNotFoundError:
+        with open("cartas.json") as f:
+            data = json.load(f)
     return data
 
 def reiniciar_juego():
@@ -41,7 +49,7 @@ font_subclass  = pygame.font.SysFont("arial", 12)
 font_habilidad = pygame.font.SysFont("arial", 15)
 font_mensaje   = pygame.font.SysFont("arial", 18, bold=True)
 font_turno     = pygame.font.SysFont("arial", 24, bold=True)
-font_fin       = pygame.font.SysFont("arial", 32, bold=True)  # fuente más grande para fin del juego
+font_fin       = pygame.font.SysFont("arial", 32, bold=True)
 
 CARD_W, CARD_H = 130, 190
 GAP = 15
@@ -64,7 +72,12 @@ seleccion_pendiente = None
 opcion_rects = []
 boton_siguiente_rect = None
 
-# -------------------- FUNCIONES AUXILIARES --------------------
+# VARIABLES PARA EL MODO AUTO-PLAY
+auto_play = False
+COOLDOWN_AUTO = 700  # Tiempo en milisegundos entre cada movimiento automático
+ultimo_paso_auto = 0
+
+# -------------------- FUNCIONES AUXILIARES (AH PUCH INMUTABLE) --------------------
 def obtener_adyacente_mas_bajo(senda, idx):
     izquierda = idx - 1 if idx > 0 else None
     derecha = idx + 1 if idx < len(senda)-1 else None
@@ -81,17 +94,28 @@ def obtener_adyacente_mas_bajo(senda, idx):
 def mover_carta(senda, from_idx, to_idx):
     if from_idx == to_idx:
         return senda
+    if senda[from_idx]["id"] == "ah_puch":  # AH PUCH es inamovible
+        return senda
+        
     carta = senda.pop(from_idx)
     if to_idx > from_idx:
         to_idx -= 1
+        
+    if to_idx >= len(senda):
+        to_idx = len(senda) - 1
+        
     senda.insert(to_idx, carta)
     return senda
 
 def intercambiar_cartas(senda, i, j):
+    if senda[i]["id"] == "ah_puch" or senda[j]["id"] == "ah_puch":
+        return senda
     senda[i], senda[j] = senda[j], senda[i]
     return senda
 
 def destruir_carta(senda, idx, mensajes):
+    if senda[idx]["id"] == "ah_puch":  # AH PUCH es inmortal
+        return senda
     carta = senda.pop(idx)
     mensajes.append(f"{carta['nombre']} ha sido destruida")
     return senda
@@ -125,6 +149,9 @@ def habilidad_rencor(senda, idx, _, mensajes):
 def habilidad_miedo(senda, idx, _, mensajes):
     objetivo = obtener_adyacente_mas_bajo(senda, idx)
     if objetivo is not None:
+        if senda[objetivo]["id"] == "ah_puch":
+            mensajes.append("Miedo no puede afectar a AH PUCH")
+            return senda
         carta = senda.pop(objetivo)
         insert_pos = 1 if len(senda) > 1 else 0
         senda.insert(insert_pos, carta)
@@ -239,9 +266,9 @@ def habilidad_herbolaria(senda, idx, cual, dir, mensajes):
     return senda
 
 def habilidad_meditacion(senda, idx, dir, mensajes):
-    otro = idx + dir * 3
-    if 0 <= otro < len(senda):
-        intercambiar_cartas(senda, idx, otro)
+    grid = idx + dir * 3
+    if 0 <= grid < len(senda):
+        intercambiar_cartas(senda, idx, grid)
         mensajes.append("Meditación intercambia a 3 espacios")
     else:
         mensajes.append("No hay carta a 3 espacios en esa dirección")
@@ -496,11 +523,13 @@ def dibujar_panel_y_botones(carta_hover):
     pygame.draw.rect(screen, (20,20,40), panel_rect, border_radius=10)
     pygame.draw.rect(screen, (150,150,150), panel_rect, width=2, border_radius=10)
     
+    status_auto = " [AUTO-PLAY ACTIVO]" if auto_play else " [Presiona 'A' para Autoplay]"
+    
     if turno_maestro:
-        turno_texto = "TURNO: MAESTROS (Azul) - Haz clic en una carta azul"
+        turno_texto = "TURNO: MAESTROS (Azul) - Haz clic en una carta azul" + status_auto
         color_turno = (80, 140, 255)
     else:
-        turno_texto = f"TURNO: FALSOS MAESTROS (Rojo) - Faltan: {len(falsos_pendientes)}"
+        turno_texto = f"TURNO: FALSOS MAESTROS (Rojo) - Faltan: {len(falsos_pendientes)}" + status_auto
         color_turno = (220, 80, 80)
     turno_surf = font_turno.render(turno_texto, True, color_turno)
     screen.blit(turno_surf, (W//2 - turno_surf.get_width()//2, 20))
@@ -558,7 +587,7 @@ def dibujar_panel_y_botones(carta_hover):
             hint = font_habilidad.render(msg, True, (100,100,120))
             screen.blit(hint, (panel_rect.x+15, panel_rect.centery - hint.get_height()//2))
     
-    if not turno_maestro and not seleccion_pendiente and falsos_pendientes:
+    if not turno_maestro and not seleccion_pendiente and falsos_pendientes and not auto_play:
         btn_rect = pygame.Rect(panel_rect.right - 150, panel_rect.y + 10, 140, 40)
         pygame.draw.rect(screen, (200,100,100), btn_rect, border_radius=5)
         text = font_habilidad.render("Siguiente Falso", True, (255,255,255))
@@ -573,11 +602,60 @@ reiniciar_juego()
 running = True
 while running:
     mouse_pos = pygame.mouse.get_pos()
+    ahora_ms = pygame.time.get_ticks()
     
-    if TIEMPO_MENSAJE and pygame.time.get_ticks() > TIEMPO_MENSAJE:
+    if TIEMPO_MENSAJE and ahora_ms > TIEMPO_MENSAJE:
         MENSAJE_TEMPORAL = ""
         TIEMPO_MENSAJE = 0
     
+    # ── MÓDULO CONTROLADOR DE AUTO-PLAY ──
+    if auto_play and not victoria and not game_over and (ahora_ms - ultimo_paso_auto > COOLDOWN_AUTO):
+        if turno_maestro and not esperando_opcion:
+            idx, vals, desc = senda_solver.obtener_movimiento_optimo(senda)
+            if idx is not None:
+                nueva_senda, msg, exito = ejecutar_habilidad(senda, idx, vals)
+                if exito:
+                    senda = nueva_senda
+                    mostrar_mensaje_temporal(msg)
+                    ULTIMA_ACCION = msg
+                    resultado, msg_fin = verificar_fin_juego(senda)
+                    if resultado:
+                        if resultado == "victoria": victoria = True
+                        else: game_over = True
+                        mostrar_mensaje_temporal(msg_fin)
+                        ULTIMA_ACCION = msg_fin
+                    else:
+                        iniciar_turno_falsos()
+                ultimo_paso_auto = ahora_ms
+            else:
+                mostrar_mensaje_temporal("IA sin movimientos ganadores posibles.")
+                auto_play = False
+
+        elif not turno_maestro and falsos_pendientes:
+            carta_id, carta_num = falsos_pendientes.pop(0)
+            idx = None
+            for i, c in enumerate(senda):
+                if c["id"] == carta_id and c["numero"] == carta_num:
+                    idx = i
+                    break
+            if idx is not None:
+                nueva_senda, msg, exito = ejecutar_habilidad(senda, idx, [0])
+                if exito:
+                    senda = nueva_senda
+                    mostrar_mensaje_temporal(f"Falso: {msg}")
+                    ULTIMA_ACCION = msg
+                    resultado, msg_fin = verificar_fin_juego(senda)
+                    if resultado:
+                        if resultado == "victoria": victoria = True
+                        else: game_over = True
+                        mostrar_mensaje_temporal(msg_fin)
+                        ULTIMA_ACCION = msg_fin
+            if not falsos_pendientes:
+                turno_maestro = True
+                ULTIMA_ACCION = ""
+                mostrar_mensaje_temporal("Turno de MAESTROS nuevamente")
+            ultimo_paso_auto = ahora_ms
+
     for event in pygame.event.get():
         if event.type == pygame.QUIT:
             running = False
@@ -587,12 +665,14 @@ while running:
             if event.key == pygame.K_r and (victoria or game_over):
                 reiniciar_juego()
                 continue
+            if event.key == pygame.K_a:
+                auto_play = not auto_play
+                ultimo_paso_auto = ahora_ms
         
         if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
-            if victoria or game_over:
+            if victoria or game_over or auto_play:
                 continue
             
-            # Selección de opción (MAESTRO)
             if seleccion_pendiente:
                 for rect, idx_opt, valor in opcion_rects:
                     if rect.collidepoint(mouse_pos):
@@ -607,10 +687,8 @@ while running:
                                 ULTIMA_ACCION = msg
                                 resultado, msg_fin = verificar_fin_juego(senda)
                                 if resultado:
-                                    if resultado == "victoria":
-                                        victoria = True
-                                    else:
-                                        game_over = True
+                                    if resultado == "victoria": victoria = True
+                                    else: game_over = True
                                     mostrar_mensaje_temporal(msg_fin)
                                     ULTIMA_ACCION = msg_fin
                                 else:
@@ -623,15 +701,13 @@ while running:
                             seleccion_pendiente["paso"] += 1
                             paso = seleccion_pendiente["pasos"][seleccion_pendiente["paso"]]
                             if paso["tipo"] == "direcciones":
-                                # Generar direcciones válidas (todas, luego validará al ejecutar)
-                                opciones = paso["opciones"]  # ya son las direcciones
+                                opciones = paso["opciones"]
                                 seleccion_pendiente["opciones"] = opciones
                             elif paso["tipo"] == "opciones":
                                 seleccion_pendiente["opciones"] = paso["opciones"]
                         break
                 continue
             
-            # Turno MAESTRO
             if turno_maestro:
                 for i, carta in enumerate(senda):
                     if get_card_rect(i).collidepoint(mouse_pos):
@@ -652,10 +728,8 @@ while running:
                                         ULTIMA_ACCION = msg
                                         resultado, msg_fin = verificar_fin_juego(senda)
                                         if resultado:
-                                            if resultado == "victoria":
-                                                victoria = True
-                                            else:
-                                                game_over = True
+                                            if resultado == "victoria": victoria = True
+                                            else: game_over = True
                                             mostrar_mensaje_temporal(msg_fin)
                                             ULTIMA_ACCION = msg_fin
                                         else:
@@ -687,7 +761,6 @@ while running:
                             mostrar_mensaje_temporal("Solo puedes seleccionar cartas MAESTRO (azules)")
                         break
             
-            # Turno FALSO: botón siguiente
             elif not turno_maestro and not seleccion_pendiente and boton_siguiente_rect and boton_siguiente_rect.collidepoint(mouse_pos):
                 if falsos_pendientes:
                     carta_id, carta_num = falsos_pendientes.pop(0)
@@ -715,10 +788,8 @@ while running:
                         ULTIMA_ACCION = msg
                         resultado, msg_fin = verificar_fin_juego(senda)
                         if resultado:
-                            if resultado == "victoria":
-                                victoria = True
-                            else:
-                                game_over = True
+                            if resultado == "victoria": victoria = True
+                            else: game_over = True
                             mostrar_mensaje_temporal(msg_fin)
                             ULTIMA_ACCION = msg_fin
                         if not falsos_pendientes:
@@ -730,7 +801,6 @@ while running:
                 else:
                     turno_maestro = True
     
-    # Dibujar
     screen.fill((40,40,60))
     
     carta_hover = None
@@ -747,11 +817,9 @@ while running:
         msg_rect = msg_surf.get_rect(center=(W//2, H-20))
         screen.blit(msg_surf, msg_rect)
     
-    # ---------- MEJORA ESTÉTICA: fondo para mensajes de victoria/derrota ----------
     if victoria or game_over:
-        # Crear una superficie semitransparente para el fondo
         overlay = pygame.Surface((W, H), pygame.SRCALPHA)
-        overlay.fill((0, 0, 0, 180))  # negro con opacidad 180 (0-255)
+        overlay.fill((0, 0, 0, 180))
         screen.blit(overlay, (0, 0))
         
         if victoria:
@@ -761,12 +829,10 @@ while running:
             texto_principal = "DERROTA"
             color_texto = (255, 0, 0)
         
-        # Texto principal
         main_surf = font_fin.render(texto_principal, True, color_texto)
         main_rect = main_surf.get_rect(center=(W//2, H//2 - 40))
         screen.blit(main_surf, main_rect)
         
-        # Texto secundario (reinicio)
         sub_surf = font_mensaje.render("Presiona R para reiniciar   |   ESC para salir", True, (255, 255, 255))
         sub_rect = sub_surf.get_rect(center=(W//2, H//2 + 30))
         screen.blit(sub_surf, sub_rect)
